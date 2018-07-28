@@ -120,6 +120,16 @@ export class GDAXFeed extends ExchangeFeed {
     }
 
     /**
+     * Returns the Authenticated API instance if auth credentials were supplied in the constructor; null otherwise
+     */
+    get gdaxAuthApi(): GDAXExchangeAPI {
+        if (this.auth) {
+            return this.gdaxAPI;
+        }
+        return null;
+    }
+
+    /**
      * Subscribe to the products given in the `products` array.
      *
      * `subscribe` returns a Promise that resolves to true if the subscription was successful.
