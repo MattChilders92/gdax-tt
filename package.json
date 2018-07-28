@@ -50,6 +50,7 @@
     "ccxt": "1.12.137",
     "commander": "2.9.0",
     "gdax": "0.7.0",
+    "isomorphic-ws": "4.0.1",
     "limiter": "1.1.2",
     "node-bittrex-api": "0.7.7",
     "pushbullet": "2.0.0",

@@ -16,7 +16,7 @@ import { Readable } from 'stream';
 import { Logger } from '../utils/Logger';
 import { ExchangeAuthConfig } from './AuthConfig';
 import { createHmac } from 'crypto';
-import WebSocket = require('ws');
+import * as WebSocket from 'isomorphic-ws';
 import Timer = NodeJS.Timer;
 import { sanitizeMessage } from '../core/Messages';
 
@@ -105,13 +105,17 @@ export abstract class ExchangeFeed extends Readable {
         }
         this._isConnecting = true;
         const socket = new hooks.WebSocket(this.url);
-        socket.on('message', (msg: any) => this.handleMessage(msg));
-        socket.on('open', () => this.onNewConnection());
-        socket.on('close', (code: number, reason: string) => this.onClose(code, reason));
-        socket.on('error', (err: Error) => this.onError(err));
-        socket.on('connection', () => {
-            this.emit('websocket-connection');
-        });
+        socket.onmessage = this.handleMessage.bind(this);
+        socket.onclose = this.onClose.bind(this);
+        socket.onopen = this.onNewConnection.bind(this);
+        socket.onerror = this.onError.bind(this);
+        // socket.on('message', (msg: any) => this.handleMessage(msg));
+        // socket.on('open', () => this.onNewConnection());
+        // socket.on('close', (code: number, reason: string) => this.onClose(code, reason));
+        // socket.on('error', (err: Error) => this.onError(err));
+        // socket.on('connection', () => {
+        //     this.emit('websocket-connection');
+        // });
         this.socket = socket;
         this.lastHeartBeat = -1;
         this.connectionChecker = setInterval(() => this.checkConnection(30 * 1000), 5 * 1000);
@@ -166,6 +170,7 @@ export abstract class ExchangeFeed extends Readable {
         this._isConnecting = false;
         this.log('debug', `Connection to ${this.url} ${this.auth ? '(authenticated)' : ''} has been established.`);
         this.onOpen();
+        this.emit('websocket-connection');
         this.emit('websocket-open');
     }
 

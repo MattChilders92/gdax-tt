@@ -169,9 +169,9 @@ export class GDAXFeed extends ExchangeFeed {
     /**
      * Converts a GDAX feed message into a GTT [[StreamMessage]] instance
      */
-    protected handleMessage(msg: string): void {
+    protected handleMessage(msg: any): void {
         try {
-            const feedMessage = JSON.parse(msg);
+            const feedMessage = JSON.parse(msg.data);
             if (!isGDAXMessage(feedMessage)) {
                 const m = this.mapUnknown(feedMessage);
                 this.attachSequence(m, feedMessage);
