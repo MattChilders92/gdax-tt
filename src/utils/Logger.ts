@@ -20,20 +20,20 @@ export interface Logger {
     error(err: Error): void;
 }
 
-export function ConsoleLoggerFactory(options?: winston.ConsoleTransportOptions): Logger {
-    const consoleOptions: winston.ConsoleTransportOptions = {
+export function ConsoleLoggerFactory(options?: winston.transports.ConsoleTransportOptions): Logger {
+    const consoleOptions: winston.transports.ConsoleTransportOptions = {
         colorize: 'all',
         json: false,
         timestamp: true
-    };
+    } as winston.transports.ConsoleTransportOptions;
     const logOptions: winston.LoggerOptions = {
         level: 'debug',
         transports: [
             new winston.transports.Console(consoleOptions)
         ],
         colorize: true,
-        ...(options || {})};
-    const logger = new winston.Logger(logOptions);
+        ...(options || {})} as winston.LoggerOptions;
+    const logger = winston.createLogger(logOptions);
     return {
         log: (level: string, message: string, meta?: any) => {
             logger.log(level, message, meta);
@@ -54,7 +54,7 @@ export const NullLogger = {
 /**
  * Utility function that acts exactly like ConsoleLogger, except that it runs any metadata through messageSanitizer first to blank out sensitive data
  */
-export function SanitizedLoggerFactory(sensitiveKeys: string[], options?: winston.ConsoleTransportOptions): Logger {
+export function SanitizedLoggerFactory(sensitiveKeys: string[], options?: winston.transports.ConsoleTransportOptions): Logger {
     const logger: Logger = ConsoleLoggerFactory(options);
     return {
         log: (level: string, message: string, meta?: any) => {
