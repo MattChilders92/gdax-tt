@@ -49,13 +49,13 @@ describe('BookBuilder:', () => {
         });
 
         it('ordersForValue returns empty list', () => {
-            let orders: CumulativePriceLevel[] = book.ordersForValue('buy', Big(1), false);
+            let orders: CumulativePriceLevel[] = book.ordersForValue('buy', -1, Big(1), false);
             assert.deepEqual(orders, []);
-            orders = book.ordersForValue('sell', Big(1), false);
+            orders = book.ordersForValue('sell', -1, Big(1), false);
             assert.deepEqual(orders, []);
-            orders = book.ordersForValue('buy', Big(1), true);
+            orders = book.ordersForValue('buy', -1, Big(1), true);
             assert.deepEqual(orders, []);
-            orders = book.ordersForValue('sell', Big(1), true);
+            orders = book.ordersForValue('sell', -1, Big(1), true);
             assert.deepEqual(orders, []);
         });
 

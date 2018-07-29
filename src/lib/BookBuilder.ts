@@ -406,7 +406,7 @@ export class BookBuilder extends EventEmitter implements Orderbook {
      * If useQuote is true, value is assumed to represent price * size, otherwise just size is used
      * startPrice sets the first price to start counting from (inclusive). The default is undefined, which starts at the best bid/by
      */
-    ordersForValue(side: Side, value: BigJS, useQuote: boolean, start?: StartPoint): CumulativePriceLevel[] {
+    ordersForValue(side: Side, limit: number = -1, value: BigJS = Big(1000), useQuote?: boolean, start?: StartPoint): CumulativePriceLevel[] {
         const source = side === 'buy' ? this.asks : this.bids;
         const iter = source.iterator();
         let totalSize = ZERO;
@@ -455,8 +455,38 @@ export class BookBuilder extends EventEmitter implements Orderbook {
                 orders: level.orders
             });
             level = side === 'buy' ? iter.next() : iter.prev();
+            if (limit > 0 && orders.length >= limit) {
+                return orders;
+            }
         }
         return orders;
+    }
+
+    getGroupedOrders(side: Side, grouping: number = 0, limit: number = -1): CumulativePriceLevel[] {
+        let _orders = this.ordersForValue(side);
+        if (grouping > -8) {
+            const factor = Math.pow(10, grouping);
+            _orders = _orders.reduce((accum, current) => {
+                const last = accum.length > 0 && accum[accum.length-1];
+                const currentFloored = current.price.dividedToIntegerBy(factor);
+                if(!last) {
+                    current.price = currentFloored.times(factor);
+                    return [current];
+                }
+                if (last.price.dividedToIntegerBy(factor).eq(currentFloored)) {
+                    last.totalSize = last.totalSize.plus(current.totalSize);
+                    last.cumValue = last.cumValue.plus(current.cumValue);
+                    last.cumSize = last.cumSize.plus(current.cumSize);
+                    last.value = last.cumSize.plus(current.value);
+                    last.orders = last.orders.concat(current.orders);
+                } else {
+                    current.price = currentFloored.times(factor);
+                    accum.push(current);
+                }
+                return accum;
+            }, []).slice(0, limit);
+        }
+        return _orders;
     }
 
     protected removeFromPool(orderId: string): boolean {

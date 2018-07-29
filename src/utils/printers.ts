@@ -33,7 +33,6 @@ export function printOrderbook(book: Orderbook, numOrders: number = 20, basePrec
         `${padfloat(ask.price, 7, quotePrec)}  ${padfloat(ask.totalSize, 8, basePrec)}  ${padfloat(totalAsks, 9, basePrec)}\n`);
     }
     return report;
-
 }
 
 export function printSeparator() {

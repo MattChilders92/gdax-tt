@@ -41,7 +41,7 @@ describe('LiveOrderbook', () => {
             assert.equal((book as any).snapshotReceived, true);
             assert.equal(book.sequence, 1);
             // Compare with the shallowState orderbook in MockOrderbook
-            let orders: CumulativePriceLevel[] = book.ordersForValue('buy', 17, false);
+            let orders: CumulativePriceLevel[] = book.ordersForValue('buy', -1, 17, false);
             assertAggregatedLevelEqual(orders[0], {
                 price: Big(110),
                 totalSize: Big(10),
@@ -80,7 +80,7 @@ describe('LiveOrderbook', () => {
             });
             assert.equal(orders.length, 4);
             // And the bids:
-            orders = book.ordersForValue('sell', 15, false);
+            orders = book.ordersForValue('sell', -1, 15, false);
             assertAggregatedLevelEqual(orders[0], {
                 price: Big(100),
                 totalSize: Big(10),

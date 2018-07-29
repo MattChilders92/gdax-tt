@@ -154,8 +154,8 @@ export class LiveOrderbook extends Duplex implements Orderbook {
      * Return an array of (aggregated) orders whose sum is equal to or greater than `value`. The side parameter is from
      * the perspective of the purchaser, so 'buy' returns asks and 'sell' bids.
      */
-    ordersForValue(side: Side, value: Biglike, useQuote: boolean, startPrice?: StartPoint): CumulativePriceLevel[] {
-        return this._book.ordersForValue(side, Big(value), useQuote, startPrice);
+    ordersForValue(side: Side, limit: number = -1, value: Biglike = Big(1), useQuote?: boolean, startPrice?: StartPoint): CumulativePriceLevel[] {
+        return this._book.ordersForValue(side, limit, Big(value), useQuote, startPrice);
     }
 
     _read() { /* no-op */ }
