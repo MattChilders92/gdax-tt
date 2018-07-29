@@ -462,8 +462,8 @@ export class BookBuilder extends EventEmitter implements Orderbook {
         return orders;
     }
 
-    getGroupedOrders(side: Side, grouping: number = 0, limit: number = -1): CumulativePriceLevel[] {
-        let _orders = this.ordersForValue(side);
+    getGroupedOrders(side: Side, grouping: number = 0, limit: number = -1, value: BigJS = Big(1000)): CumulativePriceLevel[] {
+        let _orders = this.ordersForValue(side, -1, value);
         if (grouping > -8) {
             const factor = Math.pow(10, grouping);
             _orders = _orders.reduce((accum, current) => {
