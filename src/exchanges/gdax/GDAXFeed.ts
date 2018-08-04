@@ -147,6 +147,9 @@ export class GDAXFeed extends ExchangeFeed {
                 product_ids: products      // Use product_id to prevent clearing the other subscriptions
             };
             subscribeMessage.channels = this.channels;
+            this.products.clear();
+            products.forEach(product => this.products.add);
+            console.log('subscribe', this.channels);
             // Add Signature
             if (this.auth) {
                 subscribeMessage = this.signMessage(subscribeMessage);
