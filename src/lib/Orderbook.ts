@@ -36,7 +36,7 @@ export interface PriceLevel extends PriceComparable {
 }
 
 export interface PriceLevelWithOrders extends PriceLevel {
-    orders: Level3Order[];
+    orders?: Level3Order[];
 }
 
 export function PriceLevelFactory(price: number, size: number, side: Side): PriceLevelWithOrders {
@@ -83,8 +83,8 @@ export interface LiveOrder extends Level3Order {
  */
 export interface CumulativePriceLevel extends PriceLevelWithOrders {
     value: BigJS;
-    cumSize: BigJS;
-    cumValue: BigJS;
+    cumSize?: BigJS;
+    cumValue?: BigJS;
 }
 
 export interface OrderbookState extends SequencedMessage {

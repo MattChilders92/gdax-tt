@@ -213,6 +213,26 @@ export class BookBuilder extends EventEmitter implements Orderbook {
         return this.bids.max();
     }
 
+    getNOrders(side: Side, n: number): AggregatedLevelWithOrders[] {
+        const tree = this.getTree(side);
+        const first = side === 'buy' ? this.highestBid : this.lowestAsk;
+        if (!first) {
+            return [];
+        }
+        const iter = tree.findIter({ price: first.price, totalSize: first.totalSize } as AggregatedLevelWithOrders);
+        if (!iter) {
+            return [];
+        }
+        let start = Array.apply(null, Array(n));
+        start = start.map((v: AggregatedLevelWithOrders, i: number) => {
+            if (i === 0) {
+                return iter.data();
+            }
+            return (side === 'buy' ? iter.prev() : iter.next());
+        });
+        return start.filter((x: AggregatedLevelWithOrders) => x);
+    }
+
     get lowestAsk(): AggregatedLevelWithOrders {
         return this.asks.min();
     }
@@ -450,9 +470,9 @@ export class BookBuilder extends EventEmitter implements Orderbook {
                 totalSize: levelSize,
                 value: levelValue,
                 price: level.price,
-                cumSize: totalSize,
-                cumValue: totalValue,
-                orders: level.orders
+                // cumSize: totalSize,
+                // cumValue: totalValue,
+                // orders: level.orders
             });
             level = side === 'buy' ? iter.next() : iter.prev();
             if (limit > 0 && orders.length >= limit) {
@@ -467,7 +487,7 @@ export class BookBuilder extends EventEmitter implements Orderbook {
         if (grouping > -8) {
             const factor = Math.pow(10, grouping);
             _orders = _orders.reduce((accum, current) => {
-                const last = accum.length > 0 && accum[accum.length-1];
+                const last = accum.length > 0 && accum[accum.length - 1];
                 const currentFloored = current.price.dividedToIntegerBy(factor);
                 if(!last) {
                     current.price = currentFloored.times(factor);
@@ -487,6 +507,20 @@ export class BookBuilder extends EventEmitter implements Orderbook {
             }, []).slice(0, limit);
         }
         return _orders;
+    }
+
+    getNodesAround(side: Side, limit = 13, grouping = .01): AggregatedLevel[] {
+        const source = side === 'buy' ? this.asks : this.bids;
+        let item = side === 'buy' ? source.max() : source.min();
+        const iter = source.findIter(item);
+        let i = 0;
+        const result = [];
+        while (i < limit && item) {
+            result.push(item);
+            item = side === 'buy' ? iter.next() : iter.prev();
+            i++;
+        }
+        return result;
     }
 
     protected removeFromPool(orderId: string): boolean {

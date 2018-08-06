@@ -89,6 +89,7 @@ export class LiveOrderbook extends Duplex implements Orderbook {
         };
         this.strictMode = config.strictMode;
         this.snapshotReceived = false;
+        this.resume();
     }
 
     log(level: string, message: string, meta?: any) {
