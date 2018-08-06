@@ -73,6 +73,10 @@ export abstract class ExchangeFeed extends Readable {
         return this._isConnecting;
     }
 
+    emitConnected(): void {
+        this.emit('websocket-connection');
+    }
+
     reconnect(delay: number) {
         this._logger.log('debug', `Reconnecting to ${this.url} ${this.auth ? '(authenticated)' : ''} in ${delay * 0.001} seconds...`);
         // If applicable, close the current socket first
@@ -238,6 +242,9 @@ export function getFeed<T extends ExchangeFeed, U extends ExchangeFeedConfig>(ty
         feed = new type(config);
         feedSources[key] = feed;
     } else {
+        setTimeout(() => {
+            feed.emitConnected();
+        }, 100);
         logger.log('info', `Using existing GDAX Websocket connection to ${config.wsUrl} ${auth ? '(authenticated)' : ''}`);
     }
     return feed;

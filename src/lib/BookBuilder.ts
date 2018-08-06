@@ -478,9 +478,9 @@ export class BookBuilder extends EventEmitter implements Orderbook {
                     last.cumValue = last.cumValue.plus(current.cumValue);
                     last.cumSize = last.cumSize.plus(current.cumSize);
                     last.value = last.cumSize.plus(current.value);
-                    last.orders = last.orders.concat(current.orders);
                 } else {
                     current.price = currentFloored.times(factor);
+                    current.orders = [];
                     accum.push(current);
                 }
                 return accum;
