@@ -282,6 +282,9 @@ export class GDAXFeed extends ExchangeFeed {
                 if (+size === 0) {
                     return;
                 }
+                if (snapshotMessage[levelArray].length >= 200) {
+                    return;
+                }
                 const newOrder: Level3Order = {
                     id: price,
                     price: Big(price),
