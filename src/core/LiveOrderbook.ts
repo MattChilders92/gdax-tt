@@ -248,6 +248,8 @@ export class LiveOrderbook extends Duplex implements Orderbook {
     }
 
     private processSnapshot(snapshot: SnapshotMessage) {
+        snapshot.asks = snapshot.asks.slice(0, 1000);
+        snapshot.bids = snapshot.bids.slice(0, 1000);
         this._book.fromState(snapshot);
         this._sourceSequence = snapshot.sourceSequence;
         this.snapshotReceived = true;
