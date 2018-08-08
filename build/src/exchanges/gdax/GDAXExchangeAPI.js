@@ -441,7 +441,12 @@ class GDAXExchangeAPI {
         book.sequence = parseInt(body.sequence, 10);
         ['bids', 'asks'].forEach((side) => {
             const bookSide = side === 'bids' ? 'buy' : 'sell';
+            let count = 0;
             body[side].forEach((data) => {
+                count++;
+                if (count > 50) {
+                    return;
+                }
                 const order = {
                     id: data[2],
                     price: types_1.Big(data[0]),
@@ -451,6 +456,7 @@ class GDAXExchangeAPI {
                 book.add(order);
             });
         });
+        console.log('BOOKSIZE', book.numAsks, book.numBids);
         return book;
     }
     loadNextOrders(product, after) {

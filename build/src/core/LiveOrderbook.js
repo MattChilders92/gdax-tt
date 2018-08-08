@@ -188,8 +188,8 @@ class LiveOrderbook extends stream_1.Duplex {
         this.emit('LiveOrderbook.ticker', ticker);
     }
     processSnapshot(snapshot) {
-        snapshot.asks = snapshot.asks.slice(0, 1000);
-        snapshot.bids = snapshot.bids.slice(0, 1000);
+        snapshot.asks = snapshot.asks.slice(0, 100);
+        snapshot.bids = snapshot.bids.slice(0, 100);
         this._book.fromState(snapshot);
         this._sourceSequence = snapshot.sourceSequence;
         this.snapshotReceived = true;
