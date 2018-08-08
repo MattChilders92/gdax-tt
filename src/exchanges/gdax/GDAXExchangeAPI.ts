@@ -490,7 +490,12 @@ export class GDAXExchangeAPI implements PublicExchangeAPI, AuthenticatedExchange
         book.sequence = parseInt(body.sequence, 10);
         ['bids', 'asks'].forEach((side) => {
             const bookSide = side === 'bids' ? 'buy' : 'sell';
+            let count = 0;
             body[side].forEach((data: string[]) => {
+                count++;
+                if (count > 50) {
+                    return;
+                }
                 const order: Level3Order = {
                     id: data[2],
                     price: Big(data[0]),
@@ -500,6 +505,7 @@ export class GDAXExchangeAPI implements PublicExchangeAPI, AuthenticatedExchange
                 book.add(order);
             });
         });
+        console.log('BOOKSIZE', book.numAsks, book.numBids);
         return book;
     }
 
