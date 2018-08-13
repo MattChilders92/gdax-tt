@@ -148,8 +148,7 @@ export class GDAXFeed extends ExchangeFeed {
             };
             subscribeMessage.channels = this.channels;
             this.products.clear();
-            products.forEach(product => this.products.add);
-            console.log('subscribe', this.channels);
+            products.forEach(this.products.add);
             // Add Signature
             if (this.auth) {
                 subscribeMessage = this.signMessage(subscribeMessage);
