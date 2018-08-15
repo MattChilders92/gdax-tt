@@ -130,7 +130,13 @@ class ExchangeFeed extends stream_1.Readable {
         this.socket.removeAllListeners('open');
         this.socket.removeAllListeners('close');
         this.socket.removeAllListeners('connection');
+        const key = getKey(this.socket.url.replace(/\/$/, ''), this.auth);
+        feedSources[key] = null;
         this.socket.close();
+        setTimeout(() => {
+            this.emit('websocket-closed');
+            this.socket = null;
+        });
     }
     onNewConnection() {
         this._isConnecting = false;
