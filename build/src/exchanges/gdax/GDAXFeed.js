@@ -1,3 +1,4 @@
+"use strict";
 /***************************************************************************************************************************
  * @license                                                                                                                *
  * Copyright 2017 Coinbase, Inc.                                                                                           *
@@ -11,75 +12,14 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the                      *
  * License for the specific language governing permissions and limitations under the License.                              *
  ***************************************************************************************************************************/
-
-import { GDAXExchangeAPI } from './GDAXExchangeAPI';
-import { Big } from '../../lib/types';
-import {
-    ChangedOrderMessage,
-    ErrorMessage,
-    LevelMessage,
-    MyOrderPlacedMessage,
-    NewOrderMessage,
-    OrderDoneMessage,
-    SnapshotMessage,
-    StreamMessage,
-    TickerMessage,
-    TradeExecutedMessage,
-    TradeFinalizedMessage,
-    TradeMessage,
-    UnknownMessage
-} from '../../core/Messages';
-import { OrderPool } from '../../lib/BookBuilder';
-import {
-    GDAXChangeMessage,
-    GDAXChannel,
-    GDAXDoneMessage,
-    GDAXErrorMessage,
-    GDAXL2UpdateMessage,
-    GDAXMatchMessage,
-    GDAXOpenMessage,
-    GDAXReceivedMessage,
-    GDAXSnapshotMessage,
-    GDAXSubscriptionsMessage,
-    GDAXTickerMessage,
-    isGDAXMessage
-} from './GDAXMessages';
-import { AuthenticatedExchangeAPI } from '../AuthenticatedExchangeAPI';
-import { staticAssertNever } from '../../lib/asserts';
-import { Side, SIDES } from '../../lib/sides';
-import { Level3Order, PriceLevelWithOrders } from '../../lib/Orderbook';
-import { ExchangeFeed, ExchangeFeedConfig } from '../ExchangeFeed';
-import { ExchangeAuthConfig } from '../AuthConfig';
-import { AuthHeaders, GDAXAuthConfig } from './GDAXInterfaces';
-
-export const GDAX_WS_FEED = 'wss://ws-feed.gdax.com';
-
-type GDAXTradingMessage =
-    GDAXReceivedMessage |
-    GDAXOpenMessage |
-    GDAXDoneMessage |
-    GDAXMatchMessage |
-    GDAXChangeMessage;
-
-/**
- * Configuration interface for a GDAX websocket feed stream. `wsUrl` is used to override the default websocket URL.
- * Usually, you don't need this, but you may want to obtain a feed from the sandbox for testing, or an historical
- * message source, for example.
- *
- * The channels array determines which types of messages are sent back down the feed. Leave this as null to receive
- * all messages, or specify any of
- *   - `level2` - The orderbook messages
- *   - `matches` - all trades
- *   - `ticker` - Ticker updates (these come after every trade, so specifying both `matches` and `ticker` may be redundant)
- *   - `user` - If you provided auth credentials, private messages will also be sent
- */
-export interface GDAXFeedConfig extends ExchangeFeedConfig {
-    auth?: GDAXAuthConfig;
-    wsUrl: string;
-    channels?: string[]; // If supplied, the channels to subscribe to. This feature may be deprecated in a future release
-    apiUrl: string;
-}
-
+Object.defineProperty(exports, "__esModule", { value: true });
+const GDAXExchangeAPI_1 = require("./GDAXExchangeAPI");
+const types_1 = require("../../lib/types");
+const GDAXMessages_1 = require("./GDAXMessages");
+const asserts_1 = require("../../lib/asserts");
+const sides_1 = require("../../lib/sides");
+const ExchangeFeed_1 = require("../ExchangeFeed");
+exports.GDAX_WS_FEED = 'wss://ws-feed.gdax.com';
 /**
  * The GDAX message feed. Messages are created via a combination of WS and REST calls, which are then sent down the pipe.
  * It handles automatically reconnects on errors and tracks the connection by monitoring a heartbeat.
@@ -87,64 +27,54 @@ export interface GDAXFeedConfig extends ExchangeFeedConfig {
  * connection from the pool.
  * Error messages from the Websocket feed are passed down the stream and also emitted as 'feed-error' events.
  */
-export class GDAXFeed extends ExchangeFeed {
-    private readonly products: Set<string>;
-    private readonly gdaxAPI: GDAXExchangeAPI;
-    private readonly internalSequence: { [index: string]: number } = {};
-    private readonly channels: string[];
-
-    constructor(config: GDAXFeedConfig) {
+class GDAXFeed extends ExchangeFeed_1.ExchangeFeed {
+    constructor(config) {
         super(config);
-        this.products = new Set<string>();
+        this.internalSequence = {};
+        this.products = new Set();
         this.channels = config.channels || ['level2', 'matches', 'ticker', 'user', 'heartbeat'];
-        if (!(this.channels as any).includes('heartbeat')) {
+        if (!this.channels.includes('heartbeat')) {
             this.channels.push('heartbeat');
         }
-        this.gdaxAPI = new GDAXExchangeAPI(config);
+        this.gdaxAPI = new GDAXExchangeAPI_1.GDAXExchangeAPI(config);
         this.sensitiveKeys.push('passphrase');
         this.connect();
     }
-
-    get owner(): string {
+    get owner() {
         return 'GDAX';
     }
-
     /**
      * Returns the Authenticated API instance if auth credentials were supplied in the constructor; null otherwise
      */
-    get authenticatedAPI(): AuthenticatedExchangeAPI {
+    get authenticatedAPI() {
         if (this.auth) {
             return this.gdaxAPI;
         }
         return null;
     }
-
     /**
      * Returns the Authenticated API instance if auth credentials were supplied in the constructor; null otherwise
      */
-    get gdaxAuthApi(): GDAXExchangeAPI {
+    get gdaxAuthApi() {
         if (this.auth) {
             return this.gdaxAPI;
         }
         return null;
     }
-
     /**
      * Subscribe to the products given in the `products` array.
      *
      * `subscribe` returns a Promise that resolves to true if the subscription was successful.
      */
-    subscribe(products: string[]): Promise<boolean> {
+    subscribe(products) {
         if (!this.isConnected()) {
-            return Promise.reject(
-                new Error('Socket is not connected. Have you called connect()? Otherwise the connection may have dropped and is in the process of reconnecting.')
-            );
+            return Promise.reject(new Error('Socket is not connected. Have you called connect()? Otherwise the connection may have dropped and is in the process of reconnecting.'));
         }
         // To reset, we need to make a call with `product_ids` set
         return new Promise((resolve, reject) => {
-            let subscribeMessage: any = {
+            let subscribeMessage = {
                 type: 'subscribe',
-                product_ids: products      // Use product_id to prevent clearing the other subscriptions
+                product_ids: products // Use product_id to prevent clearing the other subscriptions
             };
             subscribeMessage.channels = this.channels;
             this.products.clear();
@@ -153,7 +83,7 @@ export class GDAXFeed extends ExchangeFeed {
             if (this.auth) {
                 subscribeMessage = this.signMessage(subscribeMessage);
             }
-            this.send(subscribeMessage, (err: Error) => {
+            this.send(subscribeMessage, (err) => {
                 if (err) {
                     this.log('error', `The subscription request to ${products.join(',')} on ${this.url} ${this.auth ? '(authenticated)' : ''} failed`, { error: err });
                     this.emit('error', err);
@@ -163,8 +93,7 @@ export class GDAXFeed extends ExchangeFeed {
             });
         });
     }
-
-    protected onClose(code: number, reason: string) {
+    onClose(code, reason) {
         // The feed has been closed by the other party. Wait a few seconds and then reconnect
         this.log('info', `The websocket feed to ${this.url} ${this.auth ? '(authenticated)' : ''} has been closed by an external party. We will reconnect in 5 seconds`, {
             code: code,
@@ -172,26 +101,23 @@ export class GDAXFeed extends ExchangeFeed {
         });
         this.reconnect(5000);
     }
-
-    protected validateAuth(auth: ExchangeAuthConfig): ExchangeAuthConfig {
+    validateAuth(auth) {
         auth = super.validateAuth(auth);
-        return auth && (auth as GDAXAuthConfig).passphrase ? auth : undefined;
+        return auth && auth.passphrase ? auth : undefined;
     }
-
     /**
      * Converts a GDAX feed message into a GTT [[StreamMessage]] instance
      */
-    protected handleMessage(msg: any): void {
+    handleMessage(msg) {
         try {
             const feedMessage = JSON.parse(msg.data);
-            if (!isGDAXMessage(feedMessage)) {
+            if (!GDAXMessages_1.isGDAXMessage(feedMessage)) {
                 const m = this.mapUnknown(feedMessage);
                 this.attachSequence(m, feedMessage);
                 this.push(m);
                 return;
             }
-
-            let message: StreamMessage;
+            let message;
             switch (feedMessage.type) {
                 case 'subscriptions':
                     this.setProducts(feedMessage);
@@ -219,13 +145,13 @@ export class GDAXFeed extends ExchangeFeed {
                 message.origin = feedMessage;
                 this.push(message);
             }
-        } catch (err) {
+        }
+        catch (err) {
             err.ws_msg = msg;
             this.onError(err);
         }
     }
-
-    protected onOpen() {
+    onOpen() {
         // If we have any products (this might be a reconnect), then re-subscribe to them
         if (this.products.size > 0) {
             const products = Array.from(this.products);
@@ -233,7 +159,8 @@ export class GDAXFeed extends ExchangeFeed {
             this.subscribe(products).then((result) => {
                 if (result) {
                     this.log('debug', `Reconnection to ${products.join(', ')} successful`);
-                } else {
+                }
+                else {
                     this.log('debug', `We were already connected to the feed it seems.`);
                 }
             }, (err) => {
@@ -242,31 +169,28 @@ export class GDAXFeed extends ExchangeFeed {
             });
         }
     }
-
-    private signMessage(msg: any): any {
-        const headers: AuthHeaders = this.gdaxAPI.getSignature('GET', '/users/self/verify', '');
+    signMessage(msg) {
+        const headers = this.gdaxAPI.getSignature('GET', '/users/self/verify', '');
         msg.signature = headers['CB-ACCESS-SIGN'];
         msg.key = headers['CB-ACCESS-KEY'];
         msg.timestamp = headers['CB-ACCESS-TIMESTAMP'];
         msg.passphrase = headers['CB-ACCESS-PASSPHRASE'];
         return msg;
     }
-
     /**
      * Returns the current message counter value for the given product. This does not correspond to the
      * official sequence numbers of the message feeds (if they exist), but is purely an internal counter value
      */
-    private getSequence(product: string) {
+    getSequence(product) {
         if (!this.internalSequence[product]) {
             this.internalSequence[product] = 1;
         }
         return this.internalSequence[product];
     }
-
-    private createSnapshotMessage(snapshot: GDAXSnapshotMessage): SnapshotMessage {
-        const product: string = snapshot.product_id;
-        const orders: OrderPool = {};
-        const snapshotMessage: SnapshotMessage = {
+    createSnapshotMessage(snapshot) {
+        const product = snapshot.product_id;
+        const orders = {};
+        const snapshotMessage = {
             type: 'snapshot',
             time: new Date(),
             productId: product,
@@ -275,7 +199,7 @@ export class GDAXFeed extends ExchangeFeed {
             bids: [],
             orderPool: orders
         };
-        SIDES.forEach((side) => {
+        sides_1.SIDES.forEach((side) => {
             const levelArray = side === 'buy' ? 'bids' : 'asks';
             snapshot[levelArray].forEach(([price, size]) => {
                 if (+size === 0) {
@@ -284,15 +208,15 @@ export class GDAXFeed extends ExchangeFeed {
                 if (snapshotMessage[levelArray].length >= 200) {
                     return;
                 }
-                const newOrder: Level3Order = {
+                const newOrder = {
                     id: price,
-                    price: Big(price),
-                    size: Big(size),
+                    price: types_1.Big(price),
+                    size: types_1.Big(size),
                     side: side
                 };
-                const level: PriceLevelWithOrders = {
-                    price: Big(price),
-                    totalSize: Big(size),
+                const level = {
+                    price: types_1.Big(price),
+                    totalSize: types_1.Big(size),
                     orders: [newOrder]
                 };
                 snapshotMessage[levelArray].push(level);
@@ -301,13 +225,12 @@ export class GDAXFeed extends ExchangeFeed {
         });
         return snapshotMessage;
     }
-
-    private processUpdate(update: GDAXL2UpdateMessage) {
-        const product: string = update.product_id;
+    processUpdate(update) {
+        const product = update.product_id;
         const time = new Date();
         update.changes.forEach(([side, price, newSize]) => {
             this.internalSequence[product] = this.getSequence(product) + 1;
-            const message: LevelMessage = {
+            const message = {
                 type: 'level',
                 time: time,
                 price: price,
@@ -321,16 +244,13 @@ export class GDAXFeed extends ExchangeFeed {
             this.push(message);
         });
     }
-
-    private attachSequence(streamMessage: StreamMessage,
-                           feedMessage: any): void {
-        if ((feedMessage as any).sequence) {
-            (streamMessage as any).sourceSequence = (feedMessage as any).sequence;
+    attachSequence(streamMessage, feedMessage) {
+        if (feedMessage.sequence) {
+            streamMessage.sourceSequence = feedMessage.sequence;
         }
     }
-
-    private mapError(errorMessage: GDAXErrorMessage): ErrorMessage {
-        const msg: ErrorMessage = {
+    mapError(errorMessage) {
+        const msg = {
             type: 'error',
             time: new Date(),
             message: errorMessage.message,
@@ -339,12 +259,11 @@ export class GDAXFeed extends ExchangeFeed {
         this.emit('feed-error', msg);
         return msg;
     }
-
-    private mapUnknown(unknown: any): UnknownMessage {
+    mapUnknown(unknown) {
         const time = unknown.time ? new Date(unknown.time) : new Date();
         const product = unknown.product_id;
         const sequence = unknown.sequence || (product && this.getSequence(product));
-        const msg: UnknownMessage = {
+        const msg = {
             type: 'unknown',
             time: time,
             sequence: sequence,
@@ -353,46 +272,43 @@ export class GDAXFeed extends ExchangeFeed {
         };
         return msg;
     }
-
-    private mapTicker(ticker: GDAXTickerMessage): TickerMessage {
-        const msg: TickerMessage = {
+    mapTicker(ticker) {
+        const msg = {
             type: 'ticker',
             time: ticker.time ? new Date(ticker.time) : new Date(),
             productId: ticker.product_id,
             sequence: ticker.sequence,
-            price: Big(ticker.price),
-            bid: Big(ticker.best_bid),
-            ask: Big(ticker.best_ask),
+            price: types_1.Big(ticker.price),
+            bid: types_1.Big(ticker.best_bid),
+            ask: types_1.Big(ticker.best_ask),
             trade_id: String(ticker.trade_id),
-            size: Big(ticker.last_size),
-            volume: Big(ticker.volume_24h)
+            size: types_1.Big(ticker.last_size),
+            volume: types_1.Big(ticker.volume_24h)
         };
         return msg;
     }
-
-    private mapFullFeed(feedMessage: GDAXTradingMessage): StreamMessage {
+    mapFullFeed(feedMessage) {
         if (feedMessage.user_id) {
             return this.mapAuthMessage(feedMessage);
-        } else {
+        }
+        else {
             return this.mapMessage(feedMessage);
         }
     }
-
-    private processSnapshot(snapshot: SnapshotMessage) {
+    processSnapshot(snapshot) {
         this.push(snapshot);
         process.nextTick(() => {
             this.emit('snapshot', snapshot.productId);
         });
     }
-
     /**
      * Converts GDAX messages into standardised GTT messages. Unknown messages are passed on as_is
      * @param feedMessage
      */
-    private mapMessage(feedMessage: GDAXTradingMessage): StreamMessage {
+    mapMessage(feedMessage) {
         switch (feedMessage.type) {
             case 'open': {
-                const msg: NewOrderMessage = {
+                const msg = {
                     type: 'newOrder',
                     time: new Date(feedMessage.time),
                     sequence: feedMessage.sequence,
@@ -411,7 +327,7 @@ export class GDAXFeed extends ExchangeFeed {
                 // to zero before removing the order. Otherwise if cancelled, remaining_size refers to the size
                 // that was on the order book
                 const size = feedMessage.reason === 'filled' ? '0' : feedMessage.remaining_size;
-                const msg: OrderDoneMessage = {
+                const msg = {
                     type: 'orderDone',
                     time: new Date(feedMessage.time),
                     sequence: feedMessage.sequence,
@@ -429,9 +345,9 @@ export class GDAXFeed extends ExchangeFeed {
             }
             case 'change': {
                 if (feedMessage.new_funds && !feedMessage.new_size) {
-                    feedMessage.new_size = (Big(feedMessage.new_funds).div(feedMessage.price).toString());
+                    feedMessage.new_size = (types_1.Big(feedMessage.new_funds).div(feedMessage.price).toString());
                 }
-                const msg: ChangedOrderMessage = {
+                const msg = {
                     type: 'changedOrder',
                     time: new Date(feedMessage.time),
                     sequence: feedMessage.sequence,
@@ -447,15 +363,14 @@ export class GDAXFeed extends ExchangeFeed {
                 return this.mapUnknown(feedMessage);
             }
             default: {
-                staticAssertNever(feedMessage);
+                asserts_1.staticAssertNever(feedMessage);
                 return this.mapUnknown(feedMessage);
             }
         }
     }
-
-    private mapMatchMessage(msg: GDAXMatchMessage): TradeMessage {
-        const takerSide: Side = msg.side === 'buy' ? 'sell' : 'buy';
-        const trade: TradeMessage = {
+    mapMatchMessage(msg) {
+        const takerSide = msg.side === 'buy' ? 'sell' : 'buy';
+        const trade = {
             type: 'trade',
             time: new Date(msg.time),
             productId: msg.product_id,
@@ -466,22 +381,22 @@ export class GDAXFeed extends ExchangeFeed {
         };
         return trade;
     }
-
     /**
      * When the user_id field is set, these are authenticated messages only we receive and so deserve special
      * consideration
      */
-    private mapAuthMessage(feedMessage: GDAXTradingMessage): StreamMessage {
+    mapAuthMessage(feedMessage) {
         switch (feedMessage.type) {
             case 'match': {
-                const isTaker: boolean = !!feedMessage.taker_user_id;
-                let side: Side;
+                const isTaker = !!feedMessage.taker_user_id;
+                let side;
                 if (!isTaker) {
                     side = feedMessage.side;
-                } else {
+                }
+                else {
                     side = feedMessage.side === 'buy' ? 'sell' : 'buy';
                 }
-                const msg: TradeExecutedMessage = {
+                const msg = {
                     type: 'tradeExecuted',
                     time: new Date(feedMessage.time),
                     productId: feedMessage.product_id,
@@ -495,7 +410,7 @@ export class GDAXFeed extends ExchangeFeed {
                 return msg;
             }
             case 'done': {
-                const msg: TradeFinalizedMessage = {
+                const msg = {
                     type: 'tradeFinalized',
                     time: new Date(feedMessage.time),
                     productId: feedMessage.product_id,
@@ -508,7 +423,7 @@ export class GDAXFeed extends ExchangeFeed {
                 return msg;
             }
             case 'open': {
-                const msg: MyOrderPlacedMessage = {
+                const msg = {
                     type: 'myOrderPlaced',
                     time: new Date(feedMessage.time),
                     productId: feedMessage.product_id,
@@ -525,17 +440,17 @@ export class GDAXFeed extends ExchangeFeed {
                 return this.mapUnknown(feedMessage);
             }
             default: {
-                staticAssertNever(feedMessage);
+                asserts_1.staticAssertNever(feedMessage);
                 return this.mapUnknown(feedMessage);
             }
         }
     }
-
-    private setProducts(msg: GDAXSubscriptionsMessage) {
-        msg.channels.forEach((ch: GDAXChannel) => {
-            ch.product_ids.forEach((p: string) => this.products.add(p));
+    setProducts(msg) {
+        msg.channels.forEach((ch) => {
+            ch.product_ids.forEach((p) => this.products.add(p));
         });
-        this.emit('subscriptions');
         this.log('debug', 'GDAX Feed subscriptions confirmed', msg);
     }
 }
+exports.GDAXFeed = GDAXFeed;
+//# sourceMappingURL=GDAXFeed.js.map

@@ -7,8 +7,7 @@ logs
 *.log
 npm-debug.log*
 node_modules
-build
-
+.yarn
 src/**/*.js
 .nyc_output
 coverage
