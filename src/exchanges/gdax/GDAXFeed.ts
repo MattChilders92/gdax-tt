@@ -536,6 +536,7 @@ export class GDAXFeed extends ExchangeFeed {
         msg.channels.forEach((ch: GDAXChannel) => {
             ch.product_ids.forEach((p: string) => this.products.add(p));
         });
+        this.emit('subscriptions');
         this.log('debug', 'GDAX Feed subscriptions confirmed', msg);
     }
 }
